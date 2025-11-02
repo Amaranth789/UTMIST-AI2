@@ -542,23 +542,44 @@ def on_combo_reward(env: WarehouseBrawl, agent: str) -> float:
 Add your dictionary of RewardFunctions here using RewTerms
 '''
 def gen_reward_manager():
+    # --- 1. 每帧奖励 (持续的动机) ---
     reward_functions = {
-        #'target_height_reward': RewTerm(func=base_height_l2, weight=0.0, params={'target_height': -4, 'obj_name': 'player'}),
-        'danger_zone_reward': RewTerm(func=danger_zone_reward, weight=0.5),
-        'damage_interaction_reward': RewTerm(func=damage_interaction_reward, weight=1.0),
-        #'head_to_middle_reward': RewTerm(func=head_to_middle_reward, weight=0.01),
-        #'head_to_opponent': RewTerm(func=head_to_opponent, weight=0.05),
+        # 策略1 (生存): 惩罚AI靠近危险区。权重从0.5 -> 4.0，让AI更“惜命”
+        'danger_zone_reward': RewTerm(func=danger_zone_reward, weight=4.0),
+        
+        # 策略3 (猎手 - 核心): 奖励打人，惩罚被打。权重从1.0 -> 5.0
+        'damage_interaction_reward': RewTerm(func=damage_interaction_reward, weight=5.0),
+        
+        # 策略3/4 (猎手/刽子手 - 压迫): 鼓励AI去压迫和“守边”。权重从0.05 -> 0.1
+        'head_to_opponent': RewTerm(func=head_to_opponent, weight=0.1),
+
+        # (保留，但注释掉我们不用的)
+        # 'target_height_reward': RewTerm(func=base_height_12, weight=0.0, params={'target_height': -4, 'obj_name': 'player'}),
+        # 'head_to_middle_reward': RewTerm(func=head_to_middle_reward, weight=0.01),
+
+        # (保留，这些是关于状态的，可以不动)
         'penalize_attack_reward': RewTerm(func=in_state_reward, weight=-0.04, params={'desired_state': AttackState}),
         'holding_more_than_3_keys': RewTerm(func=holding_more_than_3_keys, weight=-0.01),
-        #'taunt_reward': RewTerm(func=in_state_reward, weight=0.2, params={'desired_state': TauntState}),
+        'taunt_reward': RewTerm(func=in_state_reward, weight=0.2, params={'desired_state': TauntState}),
     }
+
+    # --- 2. 事件奖励 (一次性的巨大激励) ---
     signal_subscriptions = {
+        # 策略4 (刽子手 - 击杀): 奖励KO。权重从8 -> 20.0
+        # 大幅提高KO奖励，让AI不惜一切代价去完成“击杀”（包括守边）。
+        'on_knockout_reward': ('knockout_signal', RewTerm(func=on_knockout_reward, weight=20.0)),
+
+        # 策略2 (武器霸权): 奖励拾取武器！权重从10 -> 15.0
+        'on_equip_reward': ('weapon_equip_signal', RewTerm(func=on_equip_reward, weight=15.0)),
+        
+        # 策略2 (武器霸权): 惩罚丢掉武器。保留权重 15
+        'on_drop_reward': ('weapon_drop_signal', RewTerm(func=on_drop_reward, weight=15)),
+        
+        # (保留)
         'on_win_reward': ('win_signal', RewTerm(func=on_win_reward, weight=50)),
-        'on_knockout_reward': ('knockout_signal', RewTerm(func=on_knockout_reward, weight=8)),
         'on_combo_reward': ('hit_during_stun', RewTerm(func=on_combo_reward, weight=5)),
-        'on_equip_reward': ('weapon_equip_signal', RewTerm(func=on_equip_reward, weight=10)),
-        'on_drop_reward': ('weapon_drop_signal', RewTerm(func=on_drop_reward, weight=15))
     }
+
     return RewardManager(reward_functions, signal_subscriptions)
 
 # -------------------------------------------------------------------------
@@ -569,7 +590,12 @@ The main function runs training. You can change configurations such as the Agent
 '''
 if __name__ == '__main__':
     # Create agent
-    my_agent = CustomAgent(sb3_class=PPO, extractor=MLPExtractor)
+    # 
+    my_agent = CustomAgent(
+    sb3_class=PPO,
+    extractor=MLPExtractor,
+    file_path=None # <-- 修改了这一行
+    )
 
     # Start here if you want to train from scratch. e.g:
     #my_agent = RecurrentPPOAgent()
@@ -581,33 +607,33 @@ if __name__ == '__main__':
     reward_manager = gen_reward_manager()
     # Self-play settings
     selfplay_handler = SelfPlayRandom(
-        partial(type(my_agent)), # Agent class and its keyword arguments
-                                 # type(my_agent) = Agent class
+    partial(type(my_agent)), # Agent class and its keyword arguments
+    # type(my_agent) = Agent class
     )
 
     # Set save settings here:
     save_handler = SaveHandler(
-        agent=my_agent, # Agent to save
-        save_freq=100_000, # Save frequency
-        max_saved=40, # Maximum number of saved models
-        save_path='checkpoints', # Save path
-        run_name='experiment_9',
-        mode=SaveHandlerMode.FORCE # Save mode, FORCE or RESUME
+    agent=my_agent, # Agent to save
+    save_freq=100_000, # Save frequency
+    max_saved=40, # Maximum number of saved models
+    save_path='checkpoints', # Save path
+    run_name='experiment_1',
+    mode=SaveHandlerMode.RESUME
     )
 
     # Set opponent settings here:
     opponent_specification = {
-                    'self_play': (8, selfplay_handler),
-                    'constant_agent': (0.5, partial(ConstantAgent)),
-                    'based_agent': (1.5, partial(BasedAgent)),
-                }
+    'self_play': (8, selfplay_handler),
+    'constant_agent': (0.5, partial(ConstantAgent)),
+    'based_agent': (1.5, partial(BasedAgent)),
+    }
     opponent_cfg = OpponentsCfg(opponents=opponent_specification)
 
     train(my_agent,
-        reward_manager,
-        save_handler,
-        opponent_cfg,
-        CameraResolution.LOW,
-        train_timesteps=1_000_000_000,
-        train_logging=TrainLogging.PLOT
+    reward_manager,
+    save_handler,
+    opponent_cfg,
+    CameraResolution.LOW,
+    train_timesteps=1_000_000_000,
+    train_logging=TrainLogging.PLOT
     )
