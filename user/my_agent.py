@@ -108,26 +108,27 @@ class SubmittedAgent(Agent):
             del self.env
         else:
             # 1. 像创建新模型时一样，获取 policy_kwargs
+            #
             policy_kwargs = MLPExtractor.get_policy_kwargs(features_dim=64, hidden_dim=64)
             
-            # 2. 定义 custom_objects 来映射所有加载失败的类和参数
-            #    注意：这里必须使用训练时 (train_agent.py) 的默认值！
+            # 2. 定义 custom_objects，并把 policy_kwargs *作为键值对* 放进去
+            #    这才是警告信息 真正的含义
             custom_objects = {
-                "features_extractor_class": MLPExtractor,
+                # 修复 "Could not deserialize object policy_kwargs"
+                "policy_kwargs": policy_kwargs, 
                 
-                # 修复: PPO 默认学习率是 0.0003。
-                # 我们提供一个 lambda 函数（常量调度器）来替代加载失败的对象。
+                # (以下部分已证明有效，予以保留)
+                # 修复 "Could not deserialize object lr_schedule"
                 "lr_schedule": lambda _: 0.0003,  
                 
-                # 修复: PPO 默认 clip_range 是 0.2。
-                # 我们同样提供一个常量调度器。
+                # 修复 "Could not deserialize object clip_range"
                 "clip_range": lambda _: 0.2       
             }
 
-            # 3. 在 PPO.load() 中同时传入 policy_kwargs 和 custom_objects
+            # 3. 在 PPO.load() 中只传入 custom_objects
+            #    注意：顶层的 policy_kwargs 参数已被移除
             self.model = PPO.load(
                 self.file_path, 
-                policy_kwargs=policy_kwargs, 
                 custom_objects=custom_objects
             )
         # To run the sample TTNN model during inference, you can uncomment the 5 lines below:
