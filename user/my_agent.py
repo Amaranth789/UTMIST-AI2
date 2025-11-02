@@ -42,7 +42,15 @@ class SubmittedAgent(Agent):
 
     def _initialize(self) -> None:
         if self.file_path is None:
-            self.model = PPO("MlpPolicy", self.env, verbose=0)
+            self.model = PPO(
+    "MlpPolicy",
+    self.env,
+    verbose=0,
+    learning_rate=0.0001,
+    n_steps=4096,
+    gamma=0.999,
+    ent_coef=0.01
+)
             del self.env
         else:
             self.model = PPO.load(self.file_path)
@@ -60,7 +68,7 @@ class SubmittedAgent(Agent):
         if not os.path.isfile(data_path):
             print(f"Downloading {data_path}...")
             # Place a link to your PUBLIC model data here. This is where we will download it from on the tournament server.
-            url = "https://drive.google.com/file/d/1JIokiBOrOClh8piclbMlpEEs6mj3H1HJ/view?usp=sharing"
+            url = "https://drive.google.com/file/d/1cdhx3xq-pns21IN1UvcgxVCdAEgZ9GGx/view?usp=sharing"
             gdown.download(url, output=data_path, fuzzy=True)
         return data_path
 
