@@ -111,14 +111,20 @@ class SubmittedAgent(Agent):
             policy_kwargs = MLPExtractor.get_policy_kwargs(features_dim=64, hidden_dim=64)
             
             # 2. 定义 custom_objects 来映射所有加载失败的类和参数
+            #    注意：这里必须使用训练时 (train_agent.py) 的默认值！
             custom_objects = {
                 "features_extractor_class": MLPExtractor,
-                "lr_schedule": 0.0001,  # 提供一个替代的 lr_schedule (使用你训练时的值)
-                "clip_range": 0.2       # 提供一个替代的 clip_range (使用 PPO 默认值)
+                
+                # 修复: PPO 默认学习率是 0.0003。
+                # 我们提供一个 lambda 函数（常量调度器）来替代加载失败的对象。
+                "lr_schedule": lambda _: 0.0003,  
+                
+                # 修复: PPO 默认 clip_range 是 0.2。
+                # 我们同样提供一个常量调度器。
+                "clip_range": lambda _: 0.2       
             }
 
             # 3. 在 PPO.load() 中同时传入 policy_kwargs 和 custom_objects
-            #    PPO.load 会用你传入的 policy_kwargs 来替代 .zip 文件中加载失败的那个
             self.model = PPO.load(
                 self.file_path, 
                 policy_kwargs=policy_kwargs, 
@@ -137,7 +143,7 @@ class SubmittedAgent(Agent):
         if not os.path.isfile(data_path):
             print(f"Downloading {data_path}...")
             # Place a link to your PUBLIC model data here. This is where we will download it from on the tournament server.
-            url = "https://drive.google.com/file/d/1cdhx3xq-pns21IN1UvcgxVCdAEgZ9GGx/view?usp=drive_link"
+            url = "https://drive.google.com/file/d/1cdhx3xq-pns21IN1UvcgxVCdAEgZ9GGx/view?usp=sharing"
             gdown.download(url, output=data_path, fuzzy=True)
         return data_path
 
