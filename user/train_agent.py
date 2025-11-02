@@ -326,7 +326,7 @@ class CustomAgent(Agent):
         return action
 
     def save(self, file_path: str) -> None:
-        self.model.save(file_path, include=['num_timesteps'])
+        self.model.save(file_path)
 
     def learn(self, env, total_timesteps, log_interval: int = 1, verbose=0):
         self.model.set_env(env)
