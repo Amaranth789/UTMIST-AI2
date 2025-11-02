@@ -41,8 +41,18 @@ except Exception:
         client.table("ai2_leaderboard").update({"validation_status": status}).eq("username", username).execute()
 
 @pytest.mark.timeout(60) 
+@pytest.mark.timeout(60) 
 def test_agent_validation():
-    os.makedirs('submission/results', exist_ok=True)
+    # --- 1. 定义路径 ---
+    output_dir = 'submission/results'
+    video_file_path = os.path.join(output_dir, 'validate.mp4')
+    
+    # 2. 打印当前工作目录和目标路径，用于调试
+    logger.info(f"Current working directory: {os.getcwd()}")
+    os.makedirs(output_dir, exist_ok=True)
+    logger.info(f"Ensured directory exists: {os.path.abspath(output_dir)}")
+
+    # (--- 以下代码与之前相同 ---)
     username = os.getenv("USERNAME")
     create_participant(username)
     logger.info("Warming up your agent ...")
@@ -52,9 +62,10 @@ def test_agent_validation():
     match_time = 90
     reward_manager = gen_reward_manager()
     logger.info("Validation match has started ...")
+    
     run_match(my_agent,
             agent_2=opponent,
-            video_path=f'submission/results/validate.mp4',
+            video_path=video_file_path,  # 使用我们定义的变量
             agent_1_name='Agent 1',
             agent_2_name='Agent 2',
             resolution=CameraResolution.LOW,
@@ -62,6 +73,24 @@ def test_agent_validation():
             max_timesteps=30 * match_time,
             train_mode=True
             )
+    
+    # --- 3. 检查文件是否真的被创建了 ---
+    logger.info(f"Checking for video file at: {os.path.abspath(video_file_path)}")
+    if not os.path.isfile(video_file_path):
+        logger.error(f"!!! VALIDATION FAILED: Video file was NOT created at {os.path.abspath(video_file_path)}")
+        
+        # 打印目录内容帮助我们调试
+        logger.info("Listing contents of current directory:")
+        try:
+            logger.info(os.listdir(os.getcwd()))
+        except Exception as e:
+            logger.error(f"Could not list current directory: {e}")
+            
+        # 故意让测试失败，这样我们就能看到上面的错误日志
+        pytest.fail(f"Video file was not created: {video_file_path}")
+    else:
+        logger.info(f"+++ VALIDATION SUCCESS: Video file was found at {os.path.abspath(video_file_path)}")
+    # --- 检查结束 ---
+
     update_validation_status(username, True)
     logger.info("Validation match has completed successfully! Your agent is ready for battle!")
-
