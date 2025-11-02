@@ -42,9 +42,10 @@ except Exception:
 
 @pytest.mark.timeout(60) 
 @pytest.mark.timeout(60) 
+@pytest.mark.timeout(60) 
 def test_agent_validation():
     # --- 1. 定义路径 ---
-    output_dir = 'submission/results'
+    output_dir = 'results'  # <-- 唯一的修改在这里
     video_file_path = os.path.join(output_dir, 'validate.mp4')
     
     # 2. 打印当前工作目录和目标路径，用于调试
@@ -52,7 +53,7 @@ def test_agent_validation():
     os.makedirs(output_dir, exist_ok=True)
     logger.info(f"Ensured directory exists: {os.path.abspath(output_dir)}")
 
-    # (--- 以下代码与之前相同 ---)
+    # (--- 以下代码不变 ---)
     username = os.getenv("USERNAME")
     create_participant(username)
     logger.info("Warming up your agent ...")
