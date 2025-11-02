@@ -68,7 +68,7 @@ class SubmittedAgent(Agent):
         if not os.path.isfile(data_path):
             print(f"Downloading {data_path}...")
             # Place a link to your PUBLIC model data here. This is where we will download it from on the tournament server.
-            url = "https://drive.google.com/file/d/1cdhx3xq-pns21IN1UvcgxVCdAEgZ9GGx/view?usp=sharing"
+            url = "https://drive.google.com/file/d/13rbhhGENji3YS0vi5yN91CmiW8ea5L5i/view?usp=sharing"
             gdown.download(url, output=data_path, fuzzy=True)
         return data_path
 
