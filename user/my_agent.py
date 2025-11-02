@@ -20,10 +20,60 @@ from typing import Optional
 from environment.agent import Agent
 from stable_baselines3 import PPO, A2C # Sample RL Algo imports
 from sb3_contrib import RecurrentPPO # Importing an LSTM
-
+import torch 
+import gymnasium as gym
+from torch.nn import functional as F
+from torch import nn as nn
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 # To run the sample TTNN model, you can uncomment the 2 lines below: 
 # import ttnn
 # from user.my_agent_tt import TTMLPPolicy
+
+class MLPPolicy(nn.Module):
+    def __init__(self, obs_dim: int = 64, action_dim: int = 10, hidden_dim: int = 64):
+        """
+        A 3-layer MLP policy:
+        obs -> Linear(hidden_dim) -> ReLU -> Linear(hidden_dim) -> ReLU -> Linear(action_dim)
+        """
+        super(MLPPolicy, self).__init__()
+
+        # Input layer
+        self.fc1 = nn.Linear(obs_dim, hidden_dim, dtype=torch.float32)
+        # Hidden layer
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim, dtype=torch.float32)
+        # Output layer
+        self.fc3 = nn.Linear(hidden_dim, hidden_dim, dtype=torch.float32)
+
+    def forward(self, obs):
+        """
+        obs: [batch_size, obs_dim]
+        returns: [batch_size, action_dim]
+        """
+        x = F.relu(self.fc1(obs))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
+class MLPExtractor(BaseFeaturesExtractor):
+    '''
+    Class that defines an MLP Base Features Extractor
+    '''
+    def __init__(self, observation_space: gym.Space, features_dim: int = 64, hidden_dim: int = 64):
+        super(MLPExtractor, self).__init__(observation_space, features_dim)
+        self.model = MLPPolicy(
+            obs_dim=observation_space.shape[0], 
+            action_dim=10,
+            hidden_dim=hidden_dim,
+        )
+    
+    def forward(self, obs: torch.Tensor) -> torch.Tensor:
+        return self.model(obs)
+    
+    @classmethod
+    def get_policy_kwargs(cls, features_dim: int = 64, hidden_dim: int = 64) -> dict:
+        return dict(
+            features_extractor_class=cls,
+            features_extractor_kwargs=dict(features_dim=features_dim, hidden_dim=hidden_dim) #NOTE: features_dim = 10 to match action space output
+        )
 
 
 class SubmittedAgent(Agent):
@@ -41,6 +91,9 @@ class SubmittedAgent(Agent):
         # self.mesh_device = ttnn.open_mesh_device(ttnn.MeshShape(1,1))
 
     def _initialize(self) -> None:
+        policy_kwargs = MLPExtractor.get_policy_kwargs(features_dim=
+64, hidden_dim=64
+)
         if self.file_path is None:
             self.model = PPO(
     "MlpPolicy",
@@ -50,6 +103,7 @@ class SubmittedAgent(Agent):
     n_steps=4096,
     gamma=0.999,
     ent_coef=0.01
+    policy_kwargs=policy_kwargs
 )
             del self.env
         else:
