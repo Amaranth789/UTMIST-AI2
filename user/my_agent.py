@@ -107,10 +107,21 @@ class SubmittedAgent(Agent):
 )
             del self.env
         else:
+            # 1. 像创建新模型时一样，获取 policy_kwargs
+            policy_kwargs = MLPExtractor.get_policy_kwargs(features_dim=64, hidden_dim=64)
+            
+            # 2. 定义 custom_objects 来映射类
             custom_objects = {
                 "features_extractor_class": MLPExtractor
             }
-            self.model = PPO.load(self.file_path, custom_objects=custom_objects)
+
+            # 3. 在 PPO.load() 中同时传入 policy_kwargs 和 custom_objects
+            #    PPO.load 会用你传入的 policy_kwargs 来替代 .zip 文件中加载失败的那个
+            self.model = PPO.load(
+                self.file_path, 
+                policy_kwargs=policy_kwargs, 
+                custom_objects=custom_objects
+            )
         # To run the sample TTNN model during inference, you can uncomment the 5 lines below:
         # This assumes that your self.model.policy has the MLPPolicy architecture defined in `train_agent.py` or `my_agent_tt.py`
         # mlp_state_dict = self.model.policy.features_extractor.model.state_dict()
