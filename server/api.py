@@ -2,12 +2,21 @@ import os
 import sys
 from typing import Optional
 from supabase import create_client
+url: Optional[str] = os.environ.get("SUPABASE_URL")
+key: Optional[str] = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+
+if not url:
+    raise RuntimeError("SUPABASE_URL environment variable not set")
+if not key:
+    raise RuntimeError("SUPABASE_SERVICE_ROLE_KEY environment variable not set")
+
+try:
+    client: Client = create_client(url, key)
+except Exception as e:
+    print(f"Failed to create Supabase client: {e}", file=sys.stderr)
 
 def check_validation_status(username: str) -> bool:
     """Check if a participant has passed validation."""
-    url = os.environ["SUPABASE_URL"]
-    key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
-    client = create_client(url, key)
     existing = client.table("ai2_leaderboard").select("validation_status").eq("username", username).execute()
     rows = []
     if hasattr(existing, "data") and isinstance(existing.data, list):
@@ -22,9 +31,6 @@ def validate_battle(username1, username2) -> bool:
 
 def update_validation_status(username: str, status: bool) -> None:
     """Update the validation status for a participant."""
-    url = os.environ["SUPABASE_URL"]
-    key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
-    client = create_client(url, key)
     resp = client.table("ai2_leaderboard").update({"validation_status": status}).eq("username", username).execute()
     if hasattr(resp, "error") and resp.error:
         # supabase-py may return error object/message
@@ -32,9 +38,6 @@ def update_validation_status(username: str, status: bool) -> None:
 
 def create_participant(username: str) -> None:
     """Create a participant in the ai2_leaderboard table."""
-    url = os.environ["SUPABASE_URL"]
-    key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
-    client = create_client(url, key)
     
     # Exit early if user already exists
     existing = client.table("ai2_leaderboard").select("username").eq("username", username).execute()
