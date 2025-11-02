@@ -102,7 +102,7 @@ class SubmittedAgent(Agent):
     learning_rate=0.0001,
     n_steps=4096,
     gamma=0.999,
-    ent_coef=0.01
+    ent_coef=0.01，
     policy_kwargs=policy_kwargs
 )
             del self.env
