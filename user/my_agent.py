@@ -110,9 +110,11 @@ class SubmittedAgent(Agent):
             # 1. 像创建新模型时一样，获取 policy_kwargs
             policy_kwargs = MLPExtractor.get_policy_kwargs(features_dim=64, hidden_dim=64)
             
-            # 2. 定义 custom_objects 来映射类
+            # 2. 定义 custom_objects 来映射所有加载失败的类和参数
             custom_objects = {
-                "features_extractor_class": MLPExtractor
+                "features_extractor_class": MLPExtractor,
+                "lr_schedule": 0.0001,  # 提供一个替代的 lr_schedule (使用你训练时的值)
+                "clip_range": 0.2       # 提供一个替代的 clip_range (使用 PPO 默认值)
             }
 
             # 3. 在 PPO.load() 中同时传入 policy_kwargs 和 custom_objects
