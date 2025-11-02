@@ -40,7 +40,9 @@ except Exception:
         client = _get_sb_client()
         client.table("ai2_leaderboard").update({"validation_status": status}).eq("username", username).execute()
 
+@pytest.mark.timeout(60) 
 def test_agent_validation():
+    os.makedirs('submission/results', exist_ok=True)
     username = os.getenv("USERNAME")
     create_participant(username)
     logger.info("Warming up your agent ...")
@@ -63,5 +65,3 @@ def test_agent_validation():
     update_validation_status(username, True)
     logger.info("Validation match has completed successfully! Your agent is ready for battle!")
 
-if __name__ == "__main__":
-    test_agent_validation()
